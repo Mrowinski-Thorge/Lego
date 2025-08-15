@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="light">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>BrickBits – Minifig Parts & Builder (PWA)</title>
+<meta name="description" content="Apple-Style Shop für Minifiguren-Einzelteile mit Hotlink-Bildern und PWA." />
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<style>
+  :root{
+    --bg:#f5f6f7; --card:#ffffff; --ink:#0a0a0a; --ink-2:#4a4a4a; --hair:#e6e7e8;
+    --tint:#007aff; --ok:#34c759; --danger:#ff3b30; --shadow:0 10px 30px rgba(0,0,0,.08);
+    --r-xl:22px; --r-lg:16px; --r-md:12px; --pad-lg:22px; --pad-md:16px; --pad-sm:12px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#0c0c0e; --card:#141416; --ink:#f5f5f7; --ink-2:#b8b9bb; --hair:#26272a; --shadow:0 10px 30px rgba(0,0,0,.35); }
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%} body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Ubuntu,"Helvetica Neue",Arial,sans-serif; -webkit-font-smoothing:antialiased}
+  a{color:var(--tint);text-decoration:none}
+  .container{width:min(1200px,92vw);margin:0 auto}
+  .btn{display:inline-flex;align-items:center;gap:.6rem;cursor:pointer;user-select:none;
+    padding:.9rem 1.2rem;border-radius:14px;border:1px solid var(--hair);background:var(--card);
+    box-shadow:var(--shadow);font-weight:600;color:var(--ink);transition:.2s transform,.2s box-shadow}
+  .btn:hover{transform:translateY(-1px)}
+  .btn.primary{background:var(--tint);color:#fff;border-color:transparent}
+  .chip{padding:.45rem .7rem;border:1px solid var(--hair);border-radius:999px;background:var(--card);font-size:.85rem}
+  header{position:sticky;top:0;z-index:1000;backdrop-filter:saturate(180%) blur(20px);
+    background:color-mix(in oklab,var(--bg) 80%, transparent);border-bottom:1px solid var(--hair)}
+  .nav{display:flex;align-items:center;justify-content:space-between;padding:12px 10px;gap:10px}
+  .brand{display:flex;align-items:center;gap:12px;font-weight:800}
+  .logo{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;color:#fff;font-weight:900;
+    background:linear-gradient(180deg,#0d84ff,#4aa3ff);box-shadow:inset 0 1px 0 rgba(255,255,255,.25),var(--shadow)}
+  .search{display:flex;align-items:center;gap:8px;background:var(--card);padding:10px 12px;border-radius:12px;border:1px solid var(--hair);min-width:240px}
+  .search input{border:0;outline:0;background:transparent;color:var(--ink);width:100%}
+  .cart-btn{position:relative}.cart-badge{position:absolute;top:-6px;right:-6px;background:var(--danger);color:#fff;border-radius:999px;
+    padding:.1rem .45rem;font-size:.75rem;font-weight:700;min-width:1.2rem;text-align:center}
+  .hero{padding:42px 0 12px}
+  .hero .card{background:var(--card);border:1px solid var(--hair);border-radius:var(--r-xl);box-shadow:var(--shadow);
+    padding:clamp(16px,3vw,28px);display:grid;grid-template-columns:1.15fr .85fr;gap:clamp(16px,3vw,28px)}
+  @media (max-width:900px){.hero .card{grid-template-columns:1fr}}
+  .builder{display:grid;grid-template-columns:1fr 1.05fr;gap:24px}
+  @media (max-width:1100px){.builder{grid-template-columns:1fr}}
+  .preview{background:var(--card);border:1px solid var(--hair);border-radius:var(--r-lg);box-shadow:var(--shadow);
+    padding:var(--pad-lg);display:flex;flex-direction:column;gap:16px;align-items:center;justify-content:center}
+  .stage{width:min(420px,90%);height:min(460px,70vw);background:radial-gradient(120% 100% at 50% 0%, color-mix(in oklab,var(--card) 84%, transparent) 0%, transparent 60%),
+    linear-gradient(180deg, color-mix(in oklab, var(--card) 70%, transparent), transparent);border:1px dashed var(--hair);border-radius:18px;
+    position:relative;overflow:hidden;display:grid;place-items:center;perspective:1000px}
+  .figure{position:relative;width:260px;height:360px;transform-style:preserve-3d;transition:transform .3s ease}
+  .layer{position:absolute;left:50%;transform:translateX(-50%);image-rendering:-webkit-optimize-contrast}
+  .layer.head{top:20px;width:120px}.layer.torso{top:100px;width:180px}.layer.legs{top:230px;width:180px}.layer.acc{top:60px;width:220px;pointer-events:none}
+  .rotate-ctl{width:100%}.rotate-ctl input[type="range"]{width:100%}
+  .picker{background:var(--card);border:1px solid var(--hair);border-radius:var(--r-lg);box-shadow:var(--shadow);
+    padding:var(--pad-md);display:flex;flex-direction:column;gap:16px}
+  .scroll-row{display:flex;gap:12px;overflow:auto;padding-bottom:4px}
+  .item{min-width:152px;background:var(--card);border:1px solid var(--hair);border-radius:14px;box-shadow:var(--shadow);
+    padding:10px;display:flex;flex-direction:column;gap:8px;align-items:center;text-align:center}
+  .thumb{width:120px;height:120px;border-radius:12px;border:1px solid var(--hair);display:grid;place-items:center;overflow:hidden;background:#fafafa}
+  .price{color:var(--ink-2);font-weight:600}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  @media (max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}}@media (max-width:560px){.grid{grid-template-columns:1fr}}
+  section{margin:38px 0}.section-head{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:14px}
+  .filters{display:flex;gap:8px;flex-wrap:wrap}
+  .drawer{position:fixed;right:0;top:0;height:100%;width:min(420px,92vw);background:var(--card);border-left:1px solid var(--hair);
+    box-shadow:var(--shadow);transform:translateX(100%);transition:transform .25s ease;z-index:1200;display:flex;flex-direction:column}
+  .drawer.open{transform:translateX(0)}.drawer header{position:sticky;top:0;border-bottom:1px solid var(--hair);padding:14px 16px;background:var(--card)}
+  .drawer .list{padding:16px;display:flex;flex-direction:column;gap:10px;overflow:auto}
+  .cart-row{display:grid;grid-template-columns:56px 1fr auto;gap:10px;align-items:center;border-bottom:1px dashed var(--hair);padding-bottom:10px}
+  .cart-row img{width:56px;height:56px;object-fit:contain}
+  .qty{display:flex;align-items:center;gap:6px}.qty button{border:1px solid var(--hair);background:var(--card);border-radius:10px;width:28px;height:28px;cursor:pointer}
+  footer{color:var(--ink-2);font-size:.9rem;padding:28px 0 40px}
+  .legal{border:1px solid var(--hair);border-radius:var(--r-lg);padding:var(--pad-md);background:var(--card)}
+</style>
+</head>
+<body>
+<header>
+  <div class="container nav" role="navigation" aria-label="Hauptnavigation">
+    <div class="brand"><div class="logo">BB</div><div>BrickBits <span class="chip">PWA</span></div></div>
+    <div class="search" role="search">🔎 <input id="search" placeholder="Teile suchen …" aria-label="Suche" /></div>
+    <div class="act">
+      <button class="btn" id="installBtn">⬇️ Installieren</button>
+      <button class="btn" id="toggleTheme">🌓 Theme</button>
+      <button class="btn cart-btn" id="openCart">🛒 Warenkorb <span class="cart-badge" id="cartBadge">0</span></button>
+    </div>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="container card">
+    <div>
+      <h1>Baue deine Minifigur. Teile einzeln kaufen. Apple-clean UI.</h1>
+      <p>Hotlink-Bilder (LEGO) + PWA Offline. Wähle Kopf, Torso, Beine & Zubehör. Live-Preview mit Rotation.</p>
+      <div class="pills"><span class="chip">SWR-Caching</span><span class="chip">Installierbar</span><span class="chip">Responsive</span></div>
+      <div style="height:12px"></div>
+      <a href="#builder" class="btn primary">Jetzt konfigurieren ▸</a>
+    </div>
+
+    <div id="builder" class="builder">
+      <div class="preview" aria-label="Figur-Vorschau">
+        <div class="stage">
+          <div class="figure" id="figure3d" style="transform:rotateY(0deg)">
+            <img class="layer acc"  id="img-acc"   alt="Zubehör" />
+            <img class="layer head" id="img-head"  alt="Kopf" />
+            <img class="layer torso"id="img-torso" alt="Torso" />
+            <img class="layer legs" id="img-legs"  alt="Beine" />
+          </div>
+        </div>
+        <div class="rotate-ctl">
+          <label for="rot">Rotation: <span id="angleLbl">0°</span></label>
+          <input type="range" min="0" max="359" value="0" id="rot" />
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center">
+          <button class="btn" id="addBuildToCart">Komplette Figur in den Warenkorb</button>
+          <button class="btn" id="exportPng">Als PNG exportieren</button>
+          <span class="chip" id="buildPrice">Summe: €0,00</span>
+        </div>
+      </div>
+
+      <div class="picker">
+        <h3>Teileauswahl</h3>
+        <div class="scroll-row" id="row-heads"  aria-label="Kopf Auswahl"></div>
+        <div class="scroll-row" id="row-torsos" aria-label="Torso Auswahl"></div>
+        <div class="scroll-row" id="row-legs"   aria-label="Bein Auswahl"></div>
+        <div class="scroll-row" id="row-accs"   aria-label="Zubehör Auswahl"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="container">
+  <div class="section-head">
+    <h2>Katalog – Einzelteile</h2>
+    <div class="filters">
+      <button class="btn chip" data-filter="all">Alle</button>
+      <button class="btn chip" data-filter="heads">Köpfe</button>
+      <button class="btn chip" data-filter="torsos">Torsi</button>
+      <button class="btn chip" data-filter="legs">Beine</button>
+      <button class="btn chip" data-filter="accs">Zubehör</button>
+    </div>
+  </div>
+  <div class="grid" id="catalogGrid"></div>
+</section>
+
+<aside class="drawer" id="drawer" aria-label="Warenkorb">
+  <header class="container" style="display:flex;justify-content:space-between;align-items:center;">
+    <strong>Warenkorb</strong>
+    <button class="btn" id="closeCart">Schließen</button>
+  </header>
+  <div class="list" id="cartList" role="list"></div>
+  <footer>
+    <div style="display:flex;justify-content:space-between;">
+      <strong>Zwischensumme</strong><strong id="cartSum">€0,00</strong>
+    </div>
+    <button class="btn primary" id="checkoutBtn">Zur Kasse</button>
+    <button class="btn" id="clearCart">Warenkorb leeren</button>
+  </footer>
+</aside>
+
+<footer class="container">
+  <div class="legal">
+    <strong>Rechtlicher Hinweis</strong>
+    <p>„LEGO“ und Minifigur-Designs sind ggf. geschützte Marken/Designs der LEGO Gruppe. Dieses private Projekt steht in keiner Verbindung zur LEGO Gruppe. Für Online-Veröffentlichungen brauchst du entsprechende Nutzungsrechte.</p>
+    <p>© 2025 BrickBits (Demo). UI im Apple-Stil.</p>
+  </div>
+</footer>
+
+<script>
+/* =========================================================
+   BRICKBITS PWA SHOP – One-File, Apple-Style, Hotlink-ready
+   ========================================================= */
+
+/* ======= CONFIG / CATALOG =======
+   Trage hier deine LEGO-Bild-URLs (Hotlinks) ein.
+   Jede Variante braucht 3 Ansichten: front / side / back.
+   Tipp: Nimm kleine WebP/PNG-Varianten, wenn verfügbar.  */
+
+/* TODO: LEGO-HOTLINKS – Beispielstruktur:
+   { id:"head1", name:"Head – Classic", price:2.49,
+     images:{ front:"https://.../front.png", side:"https://.../side.png", back:"https://.../back.png" } }
+   Wiederhole das für 5 Köpfe, 5 Torsi, 5 Beine, 5 Zubehör.
+*/
+
+const catalog = {
+  heads: [
+    { id:"head1", name:"Head – Classic Smiley", price:2.49, color:"#f7d21a",
+      images:{ front:"", side:"", back:"" } },
+    { id:"head2", name:"Head – Grinning", price:2.99, color:"#f3cf2e",
+      images:{ front:"", side:"", back:"" } },
+    { id:"head3", name:"Head – Angry", price:2.99, color:"#f1c40f",
+      images:{ front:"", side:"", back:"" } },
+    { id:"head4", name:"Head – Robot", price:3.49, color:"#b7c0c7",
+      images:{ front:"", side:"", back:"" } },
+    { id:"head5", name:"Head – Sunglasses", price:3.29, color:"#ffd84a",
+      images:{ front:"", side:"", back:"" } },
+  ],
+  torsos: [
+    { id:"torso1", name:"Torso – Blue Jacket", price:3.99, color:"#2c7df0",
+      images:{ front:"", side:"", back:"" } },
+    { id:"torso2", name:"Torso – Space Logo", price:4.49, color:"#2f2f2f",
+      images:{ front:"", side:"", back:"" } },
+    { id:"torso3", name:"Torso – Chef", price:3.99, color:"#ffffff", stroke:"#e0e0e0",
+      images:{ front:"", side:"", back:"" } },
+    { id:"torso4", name:"Torso – Explorer", price:4.29, color:"#3baf7a",
+      images:{ front:"", side:"", back:"" } },
+    { id:"torso5", name:"Torso – Knight", price:4.99, color:"#9da6ff",
+      images:{ front:"", side:"", back:"" } },
+  ],
+  legs: [
+    { id:"legs1", name:"Legs – Blue", price:3.49, color:"#2c7df0",
+      images:{ front:"", side:"", back:"" } },
+    { id:"legs2", name:"Legs – Black", price:3.49, color:"#222222",
+      images:{ front:"", side:"", back:"" } },
+    { id:"legs3", name:"Legs – White", price:3.49, color:"#ffffff", stroke:"#e0e0e0",
+      images:{ front:"", side:"", back:"" } },
+    { id:"legs4", name:"Legs – Red", price:3.49, color:"#dd3a3a",
+      images:{ front:"", side:"", back:"" } },
+    { id:"legs5", name:"Legs – Sandgreen", price:3.49, color:"#7ea793",
+      images:{ front:"", side:"", back:"" } },
+  ],
+  accs: [
+    { id:"acc1", name:"Accessory – Sword", price:1.99, color:"#a8aeb6",
+      images:{ front:"", side:"", back:"" } },
+    { id:"acc2", name:"Accessory – Shield", price:2.49, color:"#9da6ff",
+      images:{ front:"", side:"", back:"" } },
+    { id:"acc3", name:"Accessory – Mug", price:1.49, color:"#ffc266",
+      images:{ front:"", side:"", back:"" } },
+    { id:"acc4", name:"Accessory – Wrench", price:1.49, color:"#8e8e93",
+      images:{ front:"", side:"", back:"" } },
+    { id:"acc5", name:"Accessory – Flower", price:1.49, color:"#ff5fa2",
+      images:{ front:"", side:"", back:"" } },
+  ],
+};
+
+// aktueller Build
+const build = { head:null, torso:null, legs:null, acc:null };
+const fmt = (v)=> "€"+v.toFixed(2).replace(".",",");
+
+// SVG Platzhalter
+function phSvg({w=300,h=300,label,color="#eaeaea",stroke="#d7d7d7"}){
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}' viewBox='0 0 ${w} ${h}'>
+    <rect x='1' y='1' width='${w-2}' height='${h-2}' rx='16' fill='${color}' stroke='${stroke}'/>
+    <g font-family='-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif' font-size='16' fill='#333'>
+      <text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle'>${label}</text>
+    </g></svg>`;
+  return "data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg);
+}
+
+// Bildquelle – Hotlink oder Platzhalter
+function srcFor(item, view, catKey){
+  const url = (item.images && item.images[view]) || "";
+  if (url) return {src:url, fallback:null};
+  return {src: phSvg({label:`${item.name} – ${view}`, color:item.color||"#ececec", stroke:item.stroke||"#d9d9d9"}), fallback:null};
+}
+
+// Angle → View
+function angleToView(deg){
+  const d = (deg%360+360)%360;
+  if (d>=45 && d<135) return "side";
+  if (d>=135 && d<225) return "back";
+  if (d>=225 && d<315) return "side";
+  return "front";
+}
+
+// DOM Refs
+const layers={ head:document.getElementById("img-head"), torso:document.getElementById("img-torso"), legs:document.getElementById("img-legs"), acc:document.getElementById("img-acc") };
+
+function updatePreview(){
+  const angle = +document.getElementById("rot").value||0;
+  document.getElementById("angleLbl").textContent = angle+"°";
+  document.getElementById("figure3d").style.transform = `rotateY(${angle}deg)`;
+  const view = angleToView(angle);
+  let sum=0;
+  [["head","heads"],["torso","torsos"],["legs","legs"],["acc","accs"]].forEach(([slot,catKey])=>{
+    const sel = build[slot]; const img = layers[slot];
+    if(!sel){ img.src = phSvg({label:`${slot} – wählen`}); return; }
+    sum += sel.price||0;
+    const {src} = srcFor(sel, view, catKey);
+    img.src = src; img.alt = sel.name+" ("+view+")";
+  });
+  document.getElementById("buildPrice").textContent = "Summe: "+fmt(sum);
+}
+
+function mkItem(catKey, item){
+  const div = document.createElement("div"); div.className="item";
+  const {src} = srcFor(item, "front", catKey);
+  const img = new Image(); img.className="thumb"; img.src = src; img.alt = item.name;
+  const h4 = document.createElement("h4"); h4.textContent = item.name;
+  const price = document.createElement("div"); price.className="price"; price.textContent = fmt(item.price);
+  const row = document.createElement("div"); row.style.display="flex"; row.style.gap="8px"; row.style.flexWrap="wrap"; row.style.justifyContent="center";
+  const btnSel = document.createElement("button"); btnSel.className="btn"; btnSel.textContent="Auswählen";
+  btnSel.onclick = ()=>{ const slot = catKey==="heads"?"head":catKey==="torsos"?"torso":catKey==="legs"?"legs":"acc"; build[slot]=item; persistBuild(); updatePreview(); };
+  const btnCart = document.createElement("button"); btnCart.className="btn"; btnCart.textContent="In Warenkorb";
+  btnCart.onclick = ()=> addToCart({ type:"part", cat:catKey, id:item.id, name:item.name, price:item.price, thumb: img.src });
+  row.append(btnSel, btnCart);
+  div.append(img,h4,price,row);
+  return div;
+}
+
+function renderPickers(){
+  const rows={ heads:document.getElementById("row-heads"), torsos:document.getElementById("row-torsos"),
+               legs:document.getElementById("row-legs"), accs:document.getElementById("row-accs") };
+  Object.keys(rows).forEach(catKey=>{
+    rows[catKey].innerHTML="";
+    catalog[catKey].forEach(it=> rows[catKey].appendChild(mkItem(catKey, it)));
+  });
+}
+function renderCatalog(filter="all", q=""){
+  const grid = document.getElementById("catalogGrid"); grid.innerHTML="";
+  ["heads","torsos","legs","accs"].forEach(catKey=>{
+    if(filter!=="all" && filter!==catKey) return;
+    catalog[catKey].filter(it=> it.name.toLowerCase().includes(q))
+      .forEach(it=>{
+        const card = document.createElement("div"); card.className="item";
+        const {src} = srcFor(it,"front",catKey);
+        const img = new Image(); img.className="thumb"; img.src = src; img.alt = it.name;
+        const h4 = document.createElement("h4"); h4.textContent = it.name;
+        const price = document.createElement("div"); price.className="price"; price.textContent = fmt(it.price);
+        const row = document.createElement("div"); row.style.display="flex"; row.style.gap="8px"; row.style.flexWrap="wrap"; row.style.justifyContent="center";
+        const btn = document.createElement("button"); btn.className="btn"; btn.textContent="In Warenkorb";
+        btn.onclick = ()=> addToCart({ type:"part", cat:catKey, id:it.id, name:it.name, price:it.price, thumb: img.src });
+        const toBuilder = document.createElement("button"); toBuilder.className="btn"; toBuilder.textContent="Im Builder wählen";
+        toBuilder.onclick = ()=>{ const slot = catKey==="heads"?"head":catKey==="torsos"?"torso":catKey==="legs"?"legs":"acc"; build[slot]=it; persistBuild(); updatePreview(); window.location.hash="#builder"; };
+        row.append(btn,toBuilder);
+        card.append(img,h4,price,row); grid.append(card);
+      });
+  });
+}
+
+// Cart
+const drawer = document.getElementById("drawer");
+const cartBadge = document.getElementById("cartBadge");
+let cart = JSON.parse(localStorage.getItem("bb_cart")||"[]");
+
+function addToCart(item){
+  const key=item.type+":"+item.id; const f=cart.find(x=>(x.type+":"+x.id)===key);
+  if(f){ f.qty=(f.qty||1)+1; } else cart.push({...item, qty:1});
+  persistCart(); renderCart(); openCart();
+}
+function persistCart(){ localStorage.setItem("bb_cart", JSON.stringify(cart)); }
+function persistBuild(){ localStorage.setItem("bb_build", JSON.stringify(build)); }
+function renderCart(){
+  const list = document.getElementById("cartList"); list.innerHTML="";
+  let sum=0;
+  if(cart.length===0){ list.innerHTML="<div>Dein Warenkorb ist leer.</div>"; }
+  else{
+    cart.forEach((it,idx)=>{
+      sum += (it.price||0)*(it.qty||1);
+      const row = document.createElement("div"); row.className="cart-row";
+      const img = new Image(); img.src = it.thumb || phSvg({w:56,h:56,label:it.name});
+      const txt = document.createElement("div"); txt.innerHTML = `<div><strong>${it.name}</strong></div><div class='price'>${fmt(it.price)} pro Stk.</div>`;
+      const right = document.createElement("div"); right.style.display="grid"; right.style.justifyItems="end"; right.style.gap="6px";
+      const qty = document.createElement("div"); qty.className="qty";
+      const minus=document.createElement("button"); minus.textContent="–";
+      const plus =document.createElement("button"); plus.textContent="+";
+      const n=document.createElement("span"); n.textContent=it.qty;
+      minus.onclick=()=>{ it.qty=Math.max(0,(it.qty||1)-1); if(it.qty===0){ cart.splice(idx,1);} persistCart(); renderCart(); };
+      plus.onclick =()=>{ it.qty=(it.qty||1)+1; persistCart(); renderCart(); };
+      const del=document.createElement("button"); del.className="btn"; del.textContent="Entfernen"; del.onclick=()=>{ cart.splice(idx,1); persistCart(); renderCart(); };
+      qty.append(minus,n,plus); right.append(qty,del,document.createTextNode(fmt((it.price||0)*(it.qty||1))));
+      row.append(img,txt,right); list.append(row);
+    });
+  }
+  document.getElementById("cartSum").textContent=fmt(sum);
+  cartBadge.textContent=String(cart.reduce((a,b)=>a+(b.qty||1),0));
+}
+function openCart(){ drawer.classList.add("open"); }
+function closeCart(){ drawer.classList.remove("open"); }
+document.getElementById("openCart").onclick=openCart;
+document.getElementById("closeCart").onclick=closeCart;
+document.getElementById("clearCart").onclick=()=>{ cart=[]; persistCart(); renderCart(); };
+document.getElementById("checkoutBtn").onclick=()=> alert("Demo-Checkout – hier würdest du Stripe & Versand integrieren.");
+document.getElementById("addBuildToCart").onclick=()=>{
+  if(!["head","torso","legs"].every(k=>!!build[k])) return alert("Bitte Kopf, Torso und Beine auswählen.");
+  const name=`Komplette Figur: ${(build.head?.name||"")} / ${(build.torso?.name||"")} / ${(build.legs?.name||"")}${build.acc?(" + "+build.acc.name):""}`;
+  const price=(build.head?.price||0)+(build.torso?.price||0)+(build.legs?.price||0)+(build.acc?.price||0);
+  addToCart({type:"figure",id:Date.now(),name,price,thumb:document.getElementById("img-head").src});
+};
+document.querySelectorAll(".filters .btn").forEach(b=>{
+  b.onclick=()=>renderCatalog(b.dataset.filter||"all",(document.getElementById("search").value||"").trim().toLowerCase());
+});
+document.getElementById("search").addEventListener("input",(e)=> renderCatalog("all",(e.target.value||"").trim().toLowerCase()));
+document.getElementById("rot").addEventListener("input", updatePreview);
+document.getElementById("toggleTheme").onclick=()=>{
+  const root=document.documentElement; const dark=root.getAttribute("data-theme")==="dark";
+  root.setAttribute("data-theme", dark?"light":"dark"); localStorage.setItem("bb_theme",dark?"light":"dark");
+};
+
+// Export PNG (einfache Compositing-Variante)
+document.getElementById("exportPng").onclick=async()=>{
+  const canvas=document.createElement("canvas"); canvas.width=600; canvas.height=600; const ctx=canvas.getContext("2d");
+  ctx.fillStyle="#fff"; ctx.fillRect(0,0,600,600);
+  const toDraw=["legs","torso","head","acc"].map(k=> layers[k]).filter(Boolean);
+  for(const el of toDraw){
+    await new Promise(res=>{
+      const im=new Image(); im.crossOrigin="anonymous";
+      im.onload=()=>{ const scale=600/260; const x=(600/2)-(el.width*scale/2); const yMap={legs:360,torso:220,head:120,acc:150};
+        const y=(yMap[el.classList.contains("legs")?"legs":el.classList.contains("torso")?"torso":el.classList.contains("head")?"head":"acc"])*(600/360);
+        ctx.drawImage(im,x,y,el.width*scale,el.height*scale); res(); };
+      im.onerror=()=>res(); im.src=el.src;
+    });
+  }
+  const url=canvas.toDataURL("image/png"); const a=document.createElement("a"); a.href=url; a.download="minifig.png"; a.click();
+};
+
+/* ====== PERSIST & BOOT ====== */
+(function boot(){
+  const t=localStorage.getItem("bb_theme"); if(t) document.documentElement.setAttribute("data-theme",t);
+  try{ const saved=JSON.parse(localStorage.getItem("bb_build")||"{}"); ["head","torso","legs","acc"].forEach(k=>{ if(saved[k]) build[k]=saved[k]; }); }catch(e){}
+  renderPickers(); renderCatalog("all",""); updatePreview(); renderCart();
+})();
+
+/* ===========================
+   PWA: Manifest + SW (inline)
+   =========================== */
+let deferredPrompt=null;
+window.addEventListener("beforeinstallprompt",(e)=>{ e.preventDefault(); deferredPrompt=e; document.getElementById("installBtn").disabled=false; });
+document.getElementById("installBtn").addEventListener("click", async ()=>{
+  if(!deferredPrompt){ alert("Install-Prompt noch nicht verfügbar."); return; }
+  deferredPrompt.prompt(); const choice = await deferredPrompt.userChoice; deferredPrompt=null;
+  if(choice.outcome==="accepted"){ document.getElementById("installBtn").textContent="✅ Installiert"; }
+});
+
+(function registerManifestAndSW(){
+  // einfache blaue Gradient-Icon (PNG via Canvas → DataURL)
+  function makeIcon(size){
+    const c=document.createElement("canvas"); c.width=c.height=size; const x=c.getContext("2d");
+    const g=x.createLinearGradient(0,0,0,size); g.addColorStop(0,"#0d84ff"); g.addColorStop(1,"#4aa3ff");
+    x.fillStyle=g; x.fillRect(0,0,size,size);
+    x.fillStyle="#fff"; x.font=(size*0.42)+"px  -apple-system,Helvetica,Arial"; x.textAlign="center"; x.textBaseline="middle";
+    x.fillText("BB", size/2, size/2+size*0.04);
+    return c.toDataURL("image/png");
+  }
+  const manifest = {
+    name: "BrickBits – Minifig Builder",
+    short_name: "BrickBits",
+    start_url: ".",
+    display: "standalone",
+    background_color: "#0c0c0e",
+    theme_color: "#007aff",
+    icons: [
+      { src: makeIcon(192), sizes:"192x192", type:"image/png" },
+      { src: makeIcon(512), sizes:"512x512", type:"image/png", purpose:"any maskable" }
+    ]
+  };
+  const manifestBlob = new Blob([JSON.stringify(manifest)], {type:"application/manifest+json"});
+  const manifestURL = URL.createObjectURL(manifestBlob);
+  const link = document.createElement("link"); link.rel="manifest"; link.href=manifestURL; document.head.appendChild(link);
+
+  // Service Worker Code
+  const swCode = `
+    const VERSION = 'bb-v1.0.0';
+    const APP_SHELL = [ self.location.href.split('#')[0] ]; // diese index.html
+    self.addEventListener('install', e=>{
+      e.waitUntil(caches.open(VERSION).then(c=>c.addAll(APP_SHELL)).then(()=>self.skipWaiting()));
+    });
+    self.addEventListener('activate', e=>{
+      e.waitUntil((async()=>{
+        const keys=await caches.keys();
+        await Promise.all(keys.filter(k=>k!==VERSION).map(k=>caches.delete(k)));
+        await self.clients.claim();
+      })());
+    });
+    function isImage(req){ return req.destination==='image' || /\.(png|jpg|jpeg|webp|gif|svg)(\\?|$)/i.test(new URL(req.url).pathname); }
+    self.addEventListener('fetch', e=>{
+      const req = e.request;
+      // Navigations: App Shell fallback
+      if(req.mode==='navigate'){
+        e.respondWith((async()=>{
+          try{ return await fetch(req); }
+          catch{ const cache=await caches.open(VERSION); const r=await cache.match(APP_SHELL[0]); return r||Response.error(); }
+        })()); return;
+      }
+      // Bilder & statische Ressourcen: Stale-While-Revalidate
+      if(isImage(req) || req.destination==='script' || req.destination==='style'){
+        e.respondWith((async()=>{
+          const cache=await caches.open(VERSION);
+          const cached = await cache.match(req, {ignoreVary:true, ignoreSearch:false});
+          const fetchPromise = fetch(req).then(res=>{
+            try{ cache.put(req, res.clone()); }catch(_){} // opaque ok
+            return res;
+          }).catch(()=>null);
+          return cached || fetchPromise || Response.error();
+        })()); return;
+      }
+      // Default passthrough
+      e.respondWith(fetch(req).catch(()=>Response.error()));
+    });
+  `;
+  const swURL = URL.createObjectURL(new Blob([swCode], {type:"text/javascript"}));
+  if('serviceWorker' in navigator){ navigator.serviceWorker.register(swURL); }
+})();
+</script>
+</body>
+</html>
